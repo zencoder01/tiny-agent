@@ -16,13 +16,13 @@ pub struct MicroAgent {
 }
 
 impl MicroAgent {
-    pub fn new(model: &str, base_url: &str) -> Self {
+    pub fn new(model: String, base_url: String, api_key: String, max_steps: usize) -> Self {
         Self {
             tools: HashMap::new(),
-            model: model.to_string(),
-            base_url: base_url.to_string(),
-            api_key: "not-needed".to_string(),
-            max_steps: 5,
+            model,
+            base_url,
+            api_key,
+            max_steps,
             client: Client::new(),
         }
     }

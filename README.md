@@ -87,6 +87,7 @@ cargo run --release
 ## Extending the Harness (Adding Tools)
 
 To add a new tool, implement the `Tool` trait and register it with the `MicroAgent`.
+(Note: The included `WeatherTool` currently returns mocked data for demonstration purposes).
 
 ```rust
 use tiny_agent::tools::Tool;
@@ -108,7 +109,8 @@ impl Tool for MyCustomTool {
     }
 
     fn execute(&self, args: &[String]) -> Result<String, Box<dyn Error>> {
-        // Your logic here
+        // Note: For demonstration purposes, you would return mocked data here
+        // or make an HTTP request to a real weather API.
         Ok(format!("Executed with {}", args[0]))
     }
 }

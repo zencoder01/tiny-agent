@@ -17,11 +17,8 @@ impl Tool for CalculatorTool {
     }
 
     fn execute(&self, args: &[String]) -> Result<String, Box<dyn Error>> {
-        if args.is_empty() {
-            return Err("Missing argument: expression".into());
-        }
+        let expr = args.get(0).ok_or("Missing argument: expression")?;
         
-        let expr = &args[0];
         // In a real agent, we'd use a safe evaluator crate like `meval` or `fasteval`.
         // For demonstration, we'll just parse very basic `a op b`
         let tokens: Vec<&str> = expr.split_whitespace().collect();

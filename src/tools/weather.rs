@@ -1,6 +1,8 @@
 use std::error::Error;
 use super::Tool;
 
+/// A tool that returns the current weather for a given location.
+/// Note: This currently returns hardcoded/mocked data for demonstration purposes.
 pub struct WeatherTool;
 
 impl Tool for WeatherTool {
@@ -17,11 +19,7 @@ impl Tool for WeatherTool {
     }
 
     fn execute(&self, args: &[String]) -> Result<String, Box<dyn Error>> {
-        if args.is_empty() {
-            return Err("Missing argument: location".into());
-        }
-        
-        let loc = args[0].to_lowercase();
+        let loc = args.get(0).ok_or("Missing argument: location")?.to_lowercase();
         let weather = match loc.as_str() {
             "london" => "15°C, Rainy",
             "tokyo" => "22°C, Sunny",
