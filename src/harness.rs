@@ -2,6 +2,7 @@ use reqwest::Client;
 use serde_json::json;
 use std::collections::HashMap;
 use std::error::Error;
+use std::time::Duration;
 
 use super::parser::ForgivingParser;
 use super::tools::Tool;
@@ -13,17 +14,42 @@ pub struct MicroAgent {
     api_key: String,
     max_steps: usize,
     client: Client,
+    chat_endpoint: String,
 }
 
 impl MicroAgent {
-    pub fn new(model: String, base_url: String, api_key: String, max_steps: usize) -> Self {
+    pub fn new(
+        model: String,
+        base_url: String,
+        api_key: String,
+        max_steps: usize,
+        api_gateway: Option<String>,
+    ) -> Self {
+        // Build HTTP client with performance optimizations
+        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .connect_timeout(Duration::from_secs(10))
+            .tcp_keepalive(Some(Duration::from_secs(60)))
+            .pool_max_idle_per_host(10)
+            .pool_idle_timeout(Some(Duration::from_secs(90)))
+            .build()
+            .expect("Failed to create HTTP client");
+
+        // Determine chat endpoint: use custom gateway if provided, otherwise default
+        let chat_endpoint = if let Some(gateway) = api_gateway {
+            gateway
+        } else {
+            format!("{}/chat/completions", base_url.trim_end_matches('/'))
+        };
+
         Self {
-            tools: HashMap::new(),
+            tools: HashMap::with_capacity(8),
             model,
             base_url,
             api_key,
             max_steps,
-            client: Client::new(),
+            client,
+            chat_endpoint,
         }
     }
 
@@ -54,10 +80,10 @@ impl MicroAgent {
     }
 
     pub async fn run(&self, user_prompt: &str) -> Result<String, Box<dyn Error>> {
-        let mut messages = vec![
-            json!({"role": "system", "content": self.build_system_prompt()}),
-            json!({"role": "user", "content": user_prompt}),
-        ];
+        let system_prompt = self.build_system_prompt();
+        let mut messages = Vec::with_capacity(self.max_steps * 2 + 1);
+        messages.push(json!({"role": "system", "content": system_prompt}));
+        messages.push(json!({"role": "user", "content": user_prompt}));
 
         for step in 0..self.max_steps {
             println!("\n--- Step {} ---", step + 1);
@@ -68,7 +94,7 @@ impl MicroAgent {
                 "temperature": 0.0,
             });
 
-            let resp = self.client.post(&format!("{}/chat/completions", self.base_url))
+            let resp = self.client.post(&self.chat_endpoint)
                 .header("Authorization", format!("Bearer {}", self.api_key))
                 .json(&payload)
                 .send()

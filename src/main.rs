@@ -20,6 +20,9 @@ struct Args {
 
     #[arg(short = 's', long, default_value_t = 5)]
     max_steps: usize,
+
+    #[arg(long, help = "Custom API gateway endpoint (overrides base_url/chat/completions)")]
+    api_gateway: Option<String>,
 }
 
 #[tokio::main]
@@ -31,7 +34,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{:-<50}", "");
 
     // Using configuration from arguments.
-    let mut agent = MicroAgent::new(args.model, args.base_url, args.api_key, args.max_steps);
+    let mut agent = MicroAgent::new(
+        args.model,
+        args.base_url,
+        args.api_key,
+        args.max_steps,
+        args.api_gateway,
+    );
 
     // Register tools
     agent.register_tool(Box::new(CalculatorTool));

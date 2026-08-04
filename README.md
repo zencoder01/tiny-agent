@@ -22,17 +22,29 @@ flowchart TD
     Client[User Prompt] --> Harness(MicroAgent Harness)
     
     subgraph Agent Loop
-        Harness --> |Conversation History| LLM[Local LLM Endpoint]
+        Harness --> |Conversation History| LLM[Local LLM Endpoint<br/>or Custom API Gateway]
         LLM --> |Raw Response| Parser{Forgiving XML Parser}
         
-        Parser -->|<call> tag detected| Execution[Execute Tool]
-        Execution -->|<observation> result| Harness
+        Parser -->|&lt;call&gt; tag detected| Execution[Execute Tool]
+        Execution -->|&lt;observation&gt; result| Harness
         
-        Parser -->|<answer> tag detected| Return[Return Final Answer]
+        Parser -->|&lt;answer&gt; tag detected| Return[Return Final Answer]
     end
     
     Execution -.-> Tools[(Tool Registry)]
+    
+    style LLM fill:#e1f5ff,stroke:#0066cc
+    style Harness fill:#fff4e1,stroke:#cc6600
+    style Parser fill:#e8f5e9,stroke:#2e7d32
 ```
+
+**Flow Explanation:**
+1. **User Input**: The user provides a prompt to the harness
+2. **LLM Request**: The harness sends the conversation history to the LLM endpoint (local or custom API gateway)
+3. **XML Parsing**: The forgiving parser extracts `<call>`, `<arg>`, `<thought>`, and `<answer>` tags from the raw response
+4. **Tool Execution**: If a `<call>` tag is detected, the corresponding tool is executed from the registry
+5. **Observation Injection**: The tool's result is injected back as an `<observation>` tag
+6. **Loop Continuation**: The cycle repeats until an `<answer>` tag is returned or max steps reached
 
 ---
 
@@ -67,20 +79,75 @@ Now provide your <answer> or make another <call>.
 - [Rust Toolchain](https://rustup.rs/) (1.70+)
 - A local LLM runner (e.g., [Ollama](https://ollama.com/), vLLM) exposing an OpenAI-compatible `/v1/chat/completions` endpoint.
 
-### 2. Configuration
+### 2. Installation & Setup
+
+**Clone and Build:**
+```bash
+git clone <repository-url>
+cd tiny-agent-harness
+cargo build --release
+```
+
+The binary will be available at `target/release/tiny-agent-harness`.
+
+**Optional: Install System-Wide:**
+```bash
+cargo install --path .
+```
+
+### 3. Configure Your LLM
 
 By default, the harness connects to `http://localhost:11434/v1` (the default Ollama port). Ensure you have a small model pulled and running. For example:
 
 ```bash
+# Pull and run a small model with Ollama
+ollama pull qwen2.5:0.5b
 ollama run qwen2.5:0.5b
 ```
 
-### 3. Build and Run
+Keep the Ollama server running in the background while using the harness.
 
+### 4. Run the Harness
+
+**Basic Usage:**
 ```bash
-cargo build --release
+# Using cargo (development)
 cargo run --release
+
+# Using the compiled binary directly
+./target/release/tiny-agent-harness
 ```
+
+**Command Line Options:**
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--model` | `-m` | `qwen2.5:0.5b` | Model name to use |
+| `--base-url` | `-b` | `http://localhost:11434/v1` | Base URL of the LLM endpoint |
+| `--api-key` | `-k` | `not-needed` | API key for authentication |
+| `--max-steps` | `-s` | `5` | Maximum reasoning steps before timeout |
+| `--api-gateway` | - | `None` | **Custom API gateway endpoint** (overrides default `{base_url}/chat/completions`) |
+
+**Examples:**
+
+Default usage with local Ollama:
+```bash
+cargo run --release
+# or
+./target/release/tiny-agent-harness
+```
+
+Specify a custom model and base URL:
+```bash
+cargo run --release -- --model smollm:135m --base-url http://localhost:11434/v1
+```
+
+Use a custom API gateway (for production routing, load balancing, or proxying):
+```bash
+cargo run --release -- --api-gateway https://my-api-gateway.example.com/v1/chat/completions
+```
+
+When `--api-gateway` is provided, it completely overrides the default endpoint construction, allowing you to route requests through custom infrastructure while maintaining the same request/response format.
 
 ---
 
