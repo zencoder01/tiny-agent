@@ -83,7 +83,7 @@ Now provide your <answer> or make another <call>.
 
 **Clone and Build:**
 ```bash
-git clone <YOUR_REPO_URL_HERE>
+git clone https://github.com/zencoder01/tiny-agent
 cd tiny-agent-harness
 cargo build --release
 ```
