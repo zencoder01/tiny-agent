@@ -22,17 +22,29 @@ flowchart TD
     Client[User Prompt] --> Harness(MicroAgent Harness)
     
     subgraph Agent Loop
-        Harness --> |Conversation History| LLM[Local LLM Endpoint]
+        Harness --> |Conversation History| LLM[Local LLM Endpoint<br/>or Custom API Gateway]
         LLM --> |Raw Response| Parser{Forgiving XML Parser}
         
-        Parser -->|<call> tag detected| Execution[Execute Tool]
-        Execution -->|<observation> result| Harness
+        Parser -->|&lt;call&gt; tag detected| Execution[Execute Tool]
+        Execution -->|&lt;observation&gt; result| Harness
         
-        Parser -->|<answer> tag detected| Return[Return Final Answer]
+        Parser -->|&lt;answer&gt; tag detected| Return[Return Final Answer]
     end
     
     Execution -.-> Tools[(Tool Registry)]
+    
+    style LLM fill:#e1f5ff,stroke:#0066cc
+    style Harness fill:#fff4e1,stroke:#cc6600
+    style Parser fill:#e8f5e9,stroke:#2e7d32
 ```
+
+**Flow Explanation:**
+1. **User Input**: The user provides a prompt to the harness
+2. **LLM Request**: The harness sends the conversation history to the LLM endpoint (local or custom API gateway)
+3. **XML Parsing**: The forgiving parser extracts `<call>`, `<arg>`, `<thought>`, and `<answer>` tags from the raw response
+4. **Tool Execution**: If a `<call>` tag is detected, the corresponding tool is executed from the registry
+5. **Observation Injection**: The tool's result is injected back as an `<observation>` tag
+6. **Loop Continuation**: The cycle repeats until an `<answer>` tag is returned or max steps reached
 
 ---
 
